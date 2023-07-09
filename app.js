@@ -36,19 +36,21 @@ mongoose.connect(
   { useNewUrlParser: true, useUnifiedTopology: true }
 );
 
-const userSchema = new mongoose.Schema({
-  email: {
-    type: String,
-    minLength: 10,
-    lowercase: true,
-  },
-  password: {
-    type: String,
-    minLength: 6
-  },
-  googleId:String
-});
 
+const userSchema = new mongoose.Schema({
+    username: {
+      type: String,
+      minLength: 10,
+      lowercase: true,
+    },
+    password: {
+      type: String,
+      minLength: 6,
+    },
+    googleId: String,
+    secret: String,
+  });
+  
 
 
 userSchema.plugin(passportLocalMongoose);
@@ -75,7 +77,7 @@ passport.use(new GoogleStrategy({
     userProfileURL:"https://www.googleapis.com/oauth2/v3/userinfo"
   },
   function(accessToken, refreshToken, profile, cb) {
-    console.log(profile)
+
     User.findOrCreate({ googleId: profile.id }, function (err, user) {
       return cb(err, user);
     });
@@ -111,13 +113,17 @@ app.get('/register', (req, res) => {
 });
 
 // Secrets route (protected route)
-app.get('/secrets',(req,res)=>{
-    if(req.isAuthenticated){
-        res.render('secrets');
-    }else{
-        res.redirect('/login');
+app.get("/secrets", async function(req, res){
+    try {
+      const foundUsers = await User.find({ "secret": { $ne: null } });
+      if (foundUsers) {
+        res.render("secrets", { usersWithSecrets: foundUsers });
+      }
+    } catch (err) {
+      console.log(err);
     }
-});
+  });
+
 
 // Register POST route (handling user registration)
 app.post('/register', async (req, res) => {
@@ -169,6 +175,32 @@ app.get('/logout', (req, res) => {
         }
     });
 });
+
+
+
+
+app.get('/submit',(req,res)=>{
+    if(req.isAuthenticated()){
+        res.render('submit')
+    }else{
+        res.redirect('/login')
+    }
+
+})
+
+app.post('/submit', async (req, res) => {
+    const submittedSecret = req.body.secret;
+
+    const foundUser = await User.findById(req.user.id);
+    if (!foundUser) {
+        console.log("Secret is not added.");
+    } else {
+        foundUser.secret = submittedSecret;
+        await foundUser.save();
+        res.redirect('/secrets');  // Redirect to '/secrets' instead of '/secret'
+    }
+});
+
 
 app.listen(3000, function () {
   console.log("Server started on port 3000");
