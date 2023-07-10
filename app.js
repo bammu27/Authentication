@@ -24,7 +24,7 @@ app.use(session({
     secret: "The first trillion",
     resave: false,
     saveUninitialized: true,
-    cookie: { secure: true }
+    cookie: { secure: false }
 }));
 
 // Set up Passport middleware
@@ -64,11 +64,13 @@ passport.serializeUser(function(user,done){
     done(null,user.id)
 
 })
-passport.deserializeUser(function(id,done){
-    User.findById(id,function(user,err){
-        done(err,user)
-    });
+passport.deserializeUser(function(id, done) {
+  User.findById(id)
+    .then((user) => done(null, user))
+    .catch((err) => done(err, null));
 });
+
+
 
 passport.use(new GoogleStrategy({
     clientID: process.env.CLIENT_ID,
@@ -205,6 +207,18 @@ app.post('/submit', async (req, res) => {
 app.listen(3000, function () {
   console.log("Server started on port 3000");
 });
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 
